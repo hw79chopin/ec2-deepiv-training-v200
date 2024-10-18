@@ -18,7 +18,7 @@ def concat_data_files(directory):
     concatenated_df = pd.concat(dict_df.values())
 
     # Save the concatenated DataFrame to a new Excel file
-    output_file = os.path.join(directory, 'DeepIV v2.1.0.ftr')
+    output_file = os.path.join(directory, 'DeepIV v2.0.0.ftr')
     concatenated_df.reset_index(drop=True).to_feather(output_file)
 
     print("Concatenated file has shape of:", concatenated_df.shape)
