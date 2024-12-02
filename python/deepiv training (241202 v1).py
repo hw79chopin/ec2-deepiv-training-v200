@@ -1,3 +1,6 @@
+import asyncio
+import telegram
+
 import keras
 import pickle 
 import joblib
@@ -60,9 +63,11 @@ def update_dummy_columns(row):
     return row
 
 # 1. Load data
+
 print("Data Loading...")
 df_model = pd.read_feather('../data/DeepIV v2.0.0.ftr')
 df_model = df_model[df_model['itt_hour_ln'].notnull()]
+df_model = df_model.sample(1000)
 print("Data Loaded")
 
 # 2. Prep data
@@ -156,3 +161,11 @@ print(deepIvEst._d_y)
 
 deepIvEst._effect_model.save("../model/DeepIV_effect_model_241202_v1.h5")
 print("Model Saved")
+
+async def finish_training():
+    TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
+    bot = telegram.Bot(token=TOKEN)
+    await bot.send_message(1748164923, "Model Saved")
+    
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+asyncio.run(finish_training())
