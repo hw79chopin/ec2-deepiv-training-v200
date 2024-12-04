@@ -84,8 +84,8 @@ df_model_org = df_model_org.set_index('product_id')
 print("Data Preped")
 
 # 3. bootstrap (50 samples)
-try:
-    for iter in list(range(1, 51)):
+for iter in list(range(1, 51)):
+    try:
         print("#"*20, "Boostrap {} Started".format(iter), "#"*20)
 
         # get bootstrap samples with replacement
@@ -176,10 +176,10 @@ try:
             bot = telegram.Bot(token=TOKEN)
             await bot.send_message(1748164923, "Model Saved, Bootstrap {}/{}".format(iter, 50))
         asyncio.run(finish_training())
-except:
-    async def something_wrong():
-        TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
-        bot = telegram.Bot(token=TOKEN)
-        await bot.send_message(1748164923, "Something is wrong.")
-    asyncio.run(something_wrong())
-    
+    except:
+        async def something_wrong():
+            TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
+            bot = telegram.Bot(token=TOKEN)
+            await bot.send_message(1748164923, "Something is wrong. {} iterations".format(iter))
+        asyncio.run(something_wrong())
+        
