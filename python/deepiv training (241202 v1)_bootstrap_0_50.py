@@ -103,14 +103,14 @@ for col in df_bootstrap_slc.columns:
     print("Observations of Bootstrap Samples:", len(df_model_bootstrap))
 
     # 3. train model
-    y = df_model_org[['itt_hour_ln']].values
-    t = df_model_org[['premium_perc']].values
-    x = df_model_org.drop(columns=['product_id', 
+    y = df_model_bootstrap[['itt_hour_ln']].values
+    t = df_model_bootstrap[['premium_perc']].values
+    x = df_model_bootstrap.drop(columns=['product_id', 
                                     'itt_hour_ln', # y
                                     'premium_perc', # x
                                     'likes_count_cumsum_1k', # instrumental variable
                                 ]).values
-    z = df_model_org[['likes_count_cumsum_1k']].values
+    z = df_model_bootstrap[['likes_count_cumsum_1k']].values
 
     # set seed as 1004 as in the main model
     random_seed = 1004
