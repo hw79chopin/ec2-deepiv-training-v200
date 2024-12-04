@@ -85,106 +85,105 @@ df_model_org = df_model_org.set_index('product_id')
 
 # 3. bootstrap (50 samples)
 df_bootstrap_slc = df_bootstrap.iloc[:, :50]
-try:
-    for col in df_bootstrap_slc.columns:
-        print("#"*20, "{} Started".format(col), "#"*20)
+for col in df_bootstrap_slc.columns:
+    print("#"*20, "{} Started".format(col), "#"*20)
 
-        # get bootstrap samples with replacement
-        print("Making Bootstrap Dataframe...")
-        samples = df_bootstrap_slc[col].values
-        df_sample_count = pd.DataFrame(dict(Counter(samples)), index=['count']).T
+    # get bootstrap samples with replacement
+    print("Making Bootstrap Dataframe...")
+    samples = df_bootstrap_slc[col].values
+    df_sample_count = pd.DataFrame(dict(Counter(samples)), index=['count']).T
 
-        dict_df_count = {}
-        for count in sorted(list(df_sample_count['count'].unique())):
-            df_sample_count_slc = df_sample_count[df_sample_count['count']>=count]
-            dict_df_count[count] = df_model_org.loc[df_sample_count_slc.index]
+    dict_df_count = {}
+    for count in sorted(list(df_sample_count['count'].unique())):
+        df_sample_count_slc = df_sample_count[df_sample_count['count']>=count]
+        dict_df_count[count] = df_model_org.loc[df_sample_count_slc.index]
 
-        print("Merging...")
-        df_model_bootstrap = pd.concat(dict_df_count.values()).reset_index().rename(columns={'index':'product_id'})
-        print("Observations of Bootstrap Samples:", len(df_model_bootstrap))
+    print("Merging...")
+    df_model_bootstrap = pd.concat(dict_df_count.values()).reset_index().rename(columns={'index':'product_id'})
+    print("Observations of Bootstrap Samples:", len(df_model_bootstrap))
 
-        # 3. train model
-        y = df_model_org[['itt_hour_ln']].values
-        t = df_model_org[['premium_perc']].values
-        x = df_model_org.drop(columns=['product_id', 
-                                        'itt_hour_ln', # y
-                                        'premium_perc', # x
-                                        'likes_count_cumsum_1k', # instrumental variable
-                                    ]).values
-        z = df_model_org[['likes_count_cumsum_1k']].values
+    # 3. train model
+    y = df_model_org[['itt_hour_ln']].values
+    t = df_model_org[['premium_perc']].values
+    x = df_model_org.drop(columns=['product_id', 
+                                    'itt_hour_ln', # y
+                                    'premium_perc', # x
+                                    'likes_count_cumsum_1k', # instrumental variable
+                                ]).values
+    z = df_model_org[['likes_count_cumsum_1k']].values
 
-        # set seed as 1004 as in the main model
-        random_seed = 1004
-        print("Defining Model")
-        tf.random.set_seed(random_seed)
-        np.random.seed(random_seed)
-        initializer = tf.keras.initializers.GlorotUniform(seed=random_seed)
-        treatment_model = keras.Sequential([
-                                            keras.layers.Dense(128, activation='relu', input_shape=(x.shape[1] + 1,), kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-            
-                                            keras.layers.Dense(64, activation='relu', kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-                                        
-                                            keras.layers.Dense(32, activation='relu', kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-                                        ])
-
-        tf.random.set_seed(random_seed)
-        np.random.seed(random_seed)
-        initializer = tf.keras.initializers.GlorotUniform(seed=random_seed)
-        response_model = keras.Sequential([
-                                            keras.layers.Dense(128, activation='relu', input_shape=(x.shape[1] + 1,), kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-                                        
-                                            keras.layers.Dense(64, activation='relu', kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-                                        
-                                            keras.layers.Dense(32, activation='relu', kernel_initializer=initializer),
-                                            keras.layers.BatchNormalization(),
-                                            keras.layers.Dropout(0.2),
-                                        
-                                            keras.layers.Dense(1, activation='relu', kernel_initializer=initializer)
-                                        ])
-
-        keras_fit_options = { "epochs": 100,
-                            "validation_split": 0.2,
-                            "batch_size": 128,
-                            'verbose':1, 
-                            "callbacks": [keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True), 
-                                        keras.callbacks.CSVLogger('../model/train_history_{}.csv'.format(col), separator=",", append=False)]}
-
-        deepIvEst = DeepIV(n_components = 10, # number of gaussians in our mixture density network
-                        m = lambda z, x : treatment_model(keras.layers.concatenate([z, x])), # treatment model
-                        h = lambda t, x : response_model(keras.layers.concatenate([t, x])),  # response model
-                        n_samples = 1, # number of samples to use to estimate the response
-                        use_upper_bound_loss = False, # whether to use an approximation to the true loss
-                        n_gradient_samples = 1, # number of samples to use in second estimate of the response
-                                                # (to make loss estimate unbiased)
-                        optimizer=Adam(learning_rate=0.0000001, clipvalue=1.0), 
-                        first_stage_options = keras_fit_options, # options for training treatment model
-                        second_stage_options = keras_fit_options) # options for training response model
+    # set seed as 1004 as in the main model
+    random_seed = 1004
+    print("Defining Model")
+    tf.random.set_seed(random_seed)
+    np.random.seed(random_seed)
+    initializer = tf.keras.initializers.GlorotUniform(seed=random_seed)
+    treatment_model = keras.Sequential([
+                                        keras.layers.Dense(128, activation='relu', input_shape=(x.shape[1] + 1,), kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
         
-        print("Training Started.")
-        deepIvEst.fit(Y=y, T=t, X=x, Z=z)
+                                        keras.layers.Dense(64, activation='relu', kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
+                                    
+                                        keras.layers.Dense(32, activation='relu', kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
+                                    ])
 
-        deepIvEst._effect_model.save("../model/DeepIV_effect_model_241202_v1_{}.h5".format(col))
-        print("Model Saved")
+    tf.random.set_seed(random_seed)
+    np.random.seed(random_seed)
+    initializer = tf.keras.initializers.GlorotUniform(seed=random_seed)
+    response_model = keras.Sequential([
+                                        keras.layers.Dense(128, activation='relu', input_shape=(x.shape[1] + 1,), kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
+                                    
+                                        keras.layers.Dense(64, activation='relu', kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
+                                    
+                                        keras.layers.Dense(32, activation='relu', kernel_initializer=initializer),
+                                        keras.layers.BatchNormalization(),
+                                        keras.layers.Dropout(0.2),
+                                    
+                                        keras.layers.Dense(1, activation='relu', kernel_initializer=initializer)
+                                    ])
 
-        async def finish_training():
-            TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
-            bot = telegram.Bot(token=TOKEN)
-            await bot.send_message(1748164923, "Model Saved, Bootstrap {}/{}".format(int(col.split("_")[1])+1, len(df_bootstrap_slc.columns)))
-        asyncio.run(finish_training())
-except:
-    async def something_wrong():
+    keras_fit_options = { "epochs": 100,
+                        "validation_split": 0.2,
+                        "batch_size": 128,
+                        'verbose':1, 
+                        "callbacks": [keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True), 
+                                    keras.callbacks.CSVLogger('../model/train_history_{}.csv'.format(col), separator=",", append=False)]}
+
+    deepIvEst = DeepIV(n_components = 10, # number of gaussians in our mixture density network
+                    m = lambda z, x : treatment_model(keras.layers.concatenate([z, x])), # treatment model
+                    h = lambda t, x : response_model(keras.layers.concatenate([t, x])),  # response model
+                    n_samples = 1, # number of samples to use to estimate the response
+                    use_upper_bound_loss = False, # whether to use an approximation to the true loss
+                    n_gradient_samples = 1, # number of samples to use in second estimate of the response
+                                            # (to make loss estimate unbiased)
+                    optimizer=Adam(learning_rate=0.0000001, clipvalue=1.0), 
+                    first_stage_options = keras_fit_options, # options for training treatment model
+                    second_stage_options = keras_fit_options) # options for training response model
+    
+    print("Training Started.")
+    deepIvEst.fit(Y=y, T=t, X=x, Z=z)
+
+    deepIvEst._effect_model.save("../model/DeepIV_effect_model_241202_v1_{}.h5".format(col))
+    print("Model Saved")
+
+    async def finish_training():
         TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
         bot = telegram.Bot(token=TOKEN)
-        await bot.send_message(1748164923, "Something is wrong.")
-    asyncio.run(something_wrong())
+        await bot.send_message(1748164923, "Model Saved, Bootstrap {}/{}".format(int(col.split("_")[1])+1, len(df_bootstrap_slc.columns)))
+    asyncio.run(finish_training())
+# except:
+#     async def something_wrong():
+#         TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
+#         bot = telegram.Bot(token=TOKEN)
+#         await bot.send_message(1748164923, "Something is wrong.")
+#     asyncio.run(something_wrong())
     
