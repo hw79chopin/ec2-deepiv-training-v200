@@ -174,10 +174,10 @@ for iter in list(range(1, 51)):
             bot = telegram.Bot(token=TOKEN)
             await bot.send_message(1748164923, "Model Saved, Bootstrap {}/{}".format(iter, 50))
         asyncio.run(finish_training())
-    except:
+    except Exception as e:
         async def something_wrong():
             TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
             bot = telegram.Bot(token=TOKEN)
-            await bot.send_message(1748164923, "Something is wrong. {} iterations".format(iter))
+            await bot.send_message(1748164923, "Something is wrong. {} iterations. {}".format(iter, e))
         asyncio.run(something_wrong())
         
