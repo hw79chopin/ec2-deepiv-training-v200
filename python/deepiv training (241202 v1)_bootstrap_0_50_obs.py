@@ -81,11 +81,11 @@ df_model_org = df_model[['product_id',
 ]
 df_model_org = optimize(pd.get_dummies(df_model_org, columns=['category_1', 'yyyy' ,'mm', 'brand_rename'],  dtype=np.int8))
 print("Data Preped")
-print("#"*20, "Boostrap {} Started".format(iter), "#"*20)
 
 # 3. bootstrap (50 samples)
 for iter in list(range(1, 51)):
     try:
+        print("#"*20, "Boostrap {} Started".format(iter), "#"*20)
         # get bootstrap samples with replacement
         print("Making Bootstrap Dataframe...")
         df_model_bootstrap = df_model_org.sample(len(df_model_org), replace=True, random_state=iter)
