@@ -159,7 +159,7 @@ for col in df_bootstrap_slc.columns:
                         "batch_size": 128,
                         'verbose':1, 
                         "callbacks": [keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True), 
-                                      keras.callbacks.CSVLogger('../model/trainH_history_{}.csv'.format(col), separator=",", append=False)]}
+                                      keras.callbacks.CSVLogger('../model/train_history_{}.csv'.format(col), separator=",", append=False)]}
 
     deepIvEst = DeepIV(n_components = 10, # number of gaussians in our mixture density network
                     m = lambda z, x : treatment_model(keras.layers.concatenate([z, x])), # treatment model
