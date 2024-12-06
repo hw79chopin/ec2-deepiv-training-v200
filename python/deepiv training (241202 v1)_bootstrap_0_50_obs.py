@@ -69,36 +69,37 @@ df_model = optimize(pd.read_feather('../data/DeepIV v2.0.0.ftr'))
 df_model = df_model[df_model['itt_hour_ln'].notnull()]
 print("Data Loaded")
 
-# 2. Prep data
-''' oragnize columns and make dummy columns '''
-df_model_org = df_model[['product_id', 
-                        'itt_hour_ln', # DV
-                        'premium_perc', # IV
-                        'category_1', 'yyyy', 'mm', 'brand_rename',  # Dummies
-                        'msrp_dollar_ln', 'with_release_date', 'days_since_release_ln', # independent variables
-                        'likes_count_cumsum_1k' # instrumental variable
-                        ] + [col for col in df_model.columns if "VAE" in col] # product vector
-]
-df_model_org = optimize(pd.get_dummies(df_model_org, columns=['category_1', 'yyyy' ,'mm', 'brand_rename'],  dtype=np.int8))
-print("Data Preped")
 
 # 3. bootstrap (50 samples)
 for iter in list(range(1, 51)):
     try:
+        # 2. Prep data
+        ''' oragnize columns and make dummy columns '''
+        df_model_org = df_model[['product_id', 
+                                'itt_hour_ln', # DV
+                                'premium_perc', # IV
+                                'category_1', 'yyyy', 'mm', 'brand_rename',  # Dummies
+                                'msrp_dollar_ln', 'with_release_date', 'days_since_release_ln', # independent variables
+                                'likes_count_cumsum_1k' # instrumental variable
+                                ] + [col for col in df_model.columns if "VAE" in col] # product vector
+        ]
+        df_model_org = optimize(pd.get_dummies(df_model_org, columns=['category_1', 'yyyy' ,'mm', 'brand_rename'],  dtype=np.int8))
+        print("Data Preped")
+
         print("#"*20, "Boostrap {} Started".format(iter), "#"*20)
         # get bootstrap samples with replacement
         print("Making Bootstrap Dataframe...")
-        df_model_bootstrap = df_model_org.sample(len(df_model_org), replace=True, random_state=iter)
+        df_model_org = df_model_org.sample(len(df_model_org), replace=True, random_state=iter)
 
         # 4. train model
-        y = df_model_bootstrap[['itt_hour_ln']].values
-        t = df_model_bootstrap[['premium_perc']].values
-        x = df_model_bootstrap.drop(columns=['product_id', 
+        y = df_model_org[['itt_hour_ln']].values
+        t = df_model_org[['premium_perc']].values
+        x = df_model_org.drop(columns=['product_id', 
                                         'itt_hour_ln', # y
                                         'premium_perc', # x
                                         'likes_count_cumsum_1k', # instrumental variable
                                     ]).values
-        z = df_model_bootstrap[['likes_count_cumsum_1k']].values
+        z = df_model_org[['likes_count_cumsum_1k']].values
 
         # set seed as 1004 as in the main model
         print("Defining Model")
@@ -119,7 +120,7 @@ for iter in list(range(1, 51)):
                                             keras.layers.BatchNormalization(),
                                             keras.layers.Dropout(0.2),
                                         ])
-
+ 
         tf.random.set_seed(random_seed)
         np.random.seed(random_seed)
         initializer = tf.keras.initializers.GlorotUniform(seed=random_seed)
