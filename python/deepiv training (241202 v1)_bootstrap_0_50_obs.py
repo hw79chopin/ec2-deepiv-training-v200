@@ -63,19 +63,20 @@ def update_dummy_columns(row):
     row['category_1_{}'.format(row["category_1"])] = 1
     return row
 
-# 1. Load data
-print("Data Loading...")
-df_model = optimize(pd.read_feather('../data/DeepIV v2.0.0.ftr'))
-df_model = df_model[df_model['itt_hour_ln'].notnull()]
-print("Data Loaded")
 
 
 # 3. bootstrap (50 samples)
-for iter in list(range(1, 51)):
+for iter in list(range(2, 51)):
     try:
+        # 1. Load data
+        print("Data Loading...")
+        df_model = optimize(pd.read_feather('../data/DeepIV v2.0.0.ftr'))
+        df_model = df_model[df_model['itt_hour_ln'].notnull()]
+        print("Data Loaded")
+        
         # 2. Prep data
         ''' oragnize columns and make dummy columns '''
-        df_model_org = df_model[['product_id', 
+        df_model = df_model[['product_id', 
                                 'itt_hour_ln', # DV
                                 'premium_perc', # IV
                                 'category_1', 'yyyy', 'mm', 'brand_rename',  # Dummies
@@ -83,23 +84,23 @@ for iter in list(range(1, 51)):
                                 'likes_count_cumsum_1k' # instrumental variable
                                 ] + [col for col in df_model.columns if "VAE" in col] # product vector
         ]
-        df_model_org = optimize(pd.get_dummies(df_model_org, columns=['category_1', 'yyyy' ,'mm', 'brand_rename'],  dtype=np.int8))
+        df_model = optimize(pd.get_dummies(df_model, columns=['category_1', 'yyyy' ,'mm', 'brand_rename'],  dtype=np.int8))
         print("Data Preped")
 
         print("#"*20, "Boostrap {} Started".format(iter), "#"*20)
         # get bootstrap samples with replacement
         print("Making Bootstrap Dataframe...")
-        df_model_org = df_model_org.sample(len(df_model_org), replace=True, random_state=iter)
+        df_model = df_model.sample(len(df_model), replace=True, random_state=iter)
 
         # 4. train model
-        y = df_model_org[['itt_hour_ln']].values
-        t = df_model_org[['premium_perc']].values
-        x = df_model_org.drop(columns=['product_id', 
+        y = df_model[['itt_hour_ln']].values
+        t = df_model[['premium_perc']].values
+        x = df_model.drop(columns=['product_id', 
                                         'itt_hour_ln', # y
                                         'premium_perc', # x
                                         'likes_count_cumsum_1k', # instrumental variable
                                     ]).values
-        z = df_model_org[['likes_count_cumsum_1k']].values
+        z = df_model[['likes_count_cumsum_1k']].values
 
         # set seed as 1004 as in the main model
         print("Defining Model")
@@ -175,10 +176,12 @@ for iter in list(range(1, 51)):
             bot = telegram.Bot(token=TOKEN)
             await bot.send_message(1748164923, "Model Saved, Bootstrap {}/{}".format(iter, 50))
         asyncio.run(finish_training())
+
     except Exception as e:
         async def something_wrong(error):
             TOKEN = '6975289754:AAGeD0ZeDo13wzPNoRVINYhDFuH6OMUCDoI'
             bot = telegram.Bot(token=TOKEN)
             await bot.send_message(1748164923, "Something is wrong. {} iterations. {}".format(iter, error))
         asyncio.run(something_wrong(e))
+        
         
